@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flooring Layout Calculator</title>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <div id="app">
+        <h1>Flooring Layout Calculator</h1>
+        <form id="calculator-form">
+            <fieldset>
+                <legend>Room Dimensions</legend>
+                <label for="room-length">Room Length (ft):</label>
+                <input type="number" id="room-length" step="0.01" required>
+                
+                <label for="room-width">Room Width (ft):</label>
+                <input type="number" id="room-width" step="0.01" required>
+            </fieldset>
+            
+            <fieldset>
+                <legend>Flooring Plank Dimensions</legend>
+                <label for="plank-length">Plank Length (in):</label>
+                <input type="number" id="plank-length" step="0.01" required>
+                
+                <label for="plank-width">Plank Width (in):</label>
+                <input type="number" id="plank-width" step="0.01" required>
+            </fieldset>
+            
+            <fieldset>
+                <legend>Installation Settings</legend>
+                <label for="perimeter-spacing">Perimeter Spacing (in):</label>
+                <input type="number" id="perimeter-spacing" step="0.01" value="0.25" required>
+                <small>Expansion gap required around walls</small>
+            </fieldset>
+            
+            <button type="submit">Calculate</button>
+        </form>
+        <div id="results">
+            <h2>Results</h2>
+            <div id="layout-visualization"></div>
+        </div>
+    </div>
+    <script src="js/app.js" type="module"></script>
+</body>
+</html>
