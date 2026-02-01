@@ -25,7 +25,7 @@ document.addEventListener('DOMContentLoaded', () => {
         var calculationTime = endTime - startTime;
 
         let totalResults = 0;
-        layout.forEach((rowTwoOptions, rowOneOption) => {
+        layout.forEach((rowTwoOptions) => {
             totalResults += rowTwoOptions.length;
         });
 
@@ -37,18 +37,14 @@ document.addEventListener('DOMContentLoaded', () => {
             layoutDiv.innerHTML += `<h3>Found ${totalResults} layout options</h3>`;
             layoutDiv.innerHTML += `<p>Calculation Time: ${calculationTime.toFixed(2)} ms</p>`;
             const table = document.createElement('table');
-            table.style.borderCollapse = 'collapse';
-            table.style.width = '100%';
+            table.classList.add('layout-table');
             
             // Create header row
             const thead = document.createElement('thead');
             const headerRow = document.createElement('tr');
-            ['Row 1 Start (in)', 'Row 2 Start (in)', 'Row 1 Leftover (in)', 'Row 2 Leftover (in)'].forEach(text => {
+            ['Row 1 Start (in)', 'Row 2 Start (in)', 'Row 3 Start (Row 1 Leftover) (in)', 'Row 4 Start (Row 2 Leftover) (in)'].forEach(text => {
                 const th = document.createElement('th');
                 th.textContent = text;
-                th.style.border = '1px solid #ccc';
-                th.style.padding = '8px';
-                th.style.textAlign = 'left';
                 headerRow.appendChild(th);
             });
             thead.appendChild(headerRow);
@@ -67,8 +63,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     ].forEach(value => {
                         const td = document.createElement('td');
                         td.textContent = value;
-                        td.style.border = '1px solid #ccc';
-                        td.style.padding = '8px';
                         tr.appendChild(td);
                     });
                     tbody.appendChild(tr);
@@ -76,6 +70,66 @@ document.addEventListener('DOMContentLoaded', () => {
             });
             table.appendChild(tbody);
             layoutDiv.appendChild(table);
+
+            // create a diagram of the first layout option's first 5 rows
+            const layoutFigure = document.createElement('figure');
+            const diagramDiv = document.createElement('div');
+            diagramDiv.classList.add('diagram-container');
+            const scale = window.innerWidth / roomLength; // Scale factor to make diagram fill the page width
+            diagramDiv.style.width = `${roomLength * scale}px`;
+            diagramDiv.style.height = `${(plankWidth * 5 + perimeterSpacing * 2) * scale}px`;
+            // draw perimeter spacing
+            const perimeterDiv = document.createElement('div');
+            perimeterDiv.classList.add('perimeter-spacing', 'perimeter-spacing-top');
+            perimeterDiv.style.height = `${perimeterSpacing * scale}px`;
+            diagramDiv.appendChild(perimeterDiv);
+            const perimeterBottomDiv = document.createElement('div');
+            perimeterBottomDiv.classList.add('perimeter-spacing', 'perimeter-spacing-bottom');
+            perimeterBottomDiv.style.height = `${perimeterSpacing * scale}px`;
+            diagramDiv.appendChild(perimeterBottomDiv);
+            
+            // get first row one and row two options
+            const firstRowOneOption = layout.keys().next().value;
+            const firstRowTwoOption = layout.get(firstRowOneOption)[0];
+            const rows = [firstRowOneOption, firstRowTwoOption];
+            // calculate rows 3, 4, and 5 based on leftovers
+            for (let i = 2; i < 5; i++) {
+                const previousRow = rows[i - 2];
+                const leftover = previousRow.leftover;
+                const planks = calculateRowPlanks(roomLength - (2 * perimeterSpacing), plankLength, leftover);
+                rows.push({
+                    startingLength: leftover,
+                    planks: planks,
+                    leftover: plankLength - planks[planks.length - 1]
+                });
+            }
+            
+            // draw rows
+            for (let rowIndex = 0; rowIndex < rows.length; rowIndex++) {
+                const row = rows[rowIndex];
+                let currentX = perimeterSpacing * scale;
+                const yPosition = (perimeterSpacing + (rowIndex * plankWidth)) * scale;
+                for (let plankLengthIn of row.planks) {
+                    const plankDiv = document.createElement('div');
+                    plankDiv.classList.add('plank');
+                    plankDiv.style.left = `${currentX}px`;
+                    plankDiv.style.top = `${yPosition}px`;
+                    plankDiv.style.width = `${plankLengthIn * scale}px`;
+                    plankDiv.style.height = `${plankWidth * scale}px`;
+                    plankDiv.style.backgroundColor = `hsl(${(rowIndex * 60) % 360}, 70%, 80%)`;
+                    plankDiv.textContent = `${plankLengthIn.toFixed(1)}"`;
+                    diagramDiv.appendChild(plankDiv);
+                    currentX += plankLengthIn * scale;
+                }
+            }
+            
+            layoutFigure.appendChild(diagramDiv);
+            const sampleDiagramCaption = document.createElement("figcaption");
+            sampleDiagramCaption.textContent = "Sample Layout Diagram (first option, first 5 rows)";
+            layoutFigure.appendChild(sampleDiagramCaption);
+            // insert first in layout div
+            layoutDiv.firstChild ? layoutDiv.insertBefore(layoutFigure, layoutDiv.firstChild) : layoutDiv.appendChild(layoutFigure);
+
         }
         else {
             console.error('Layout visualization div not found');
@@ -173,7 +227,11 @@ function findLayout(roomLength, roomWidth, plankLength, plankWidth, perimeterSpa
 
         let rowTwoStartingLengths = [];
         for (let len = rowTwoMinStartingLength; len <= rowTwoMaxStartingLength; len += 0.25) {
-            rowTwoStartingLengths.push(len);
+            // Ensure row two starting length differs from row one starting length by at least minStagger
+            // Also ensure row two starting length differs from row one leftover (row 3's starting length) by at least minStagger
+            if (Math.abs(len - rowOneStartingLength) >= minStagger && Math.abs(len - rowOneLeftover) >= minStagger) {
+                rowTwoStartingLengths.push(len);
+            }
         }
 
         let rowTwoPlanksOptions = [];

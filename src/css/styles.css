@@ -60,3 +60,50 @@ h1 {
     font-size: 16px;
     color: #333;
 }
+
+.layout-table {
+    border-collapse: collapse;
+    width: 100%;
+}
+
+.layout-table th,
+.layout-table td {
+    border: 1px solid #ccc;
+    padding: 8px;
+    text-align: left;
+}
+
+.diagram-container {
+    position: relative;
+    border: 1px solid #000;
+    margin-top: 20px;
+    width: 100vw;
+    margin-left: calc(-50vw + 50%);
+}
+
+.perimeter-spacing {
+    position: absolute;
+    left: 0;
+    width: 100%;
+    background-color: #eee;
+}
+
+.perimeter-spacing-top {
+    top: 0;
+}
+
+.perimeter-spacing-bottom {
+    bottom: 0;
+}
+
+.plank {
+    position: absolute;
+    border: 1px solid #000;
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: bold;
+    overflow: hidden;
+}
