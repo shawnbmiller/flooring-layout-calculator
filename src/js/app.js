@@ -31,9 +31,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // limit results to the 3 best options. Compare the starting lengths of adjacent rows and choose the options with the largest minimum difference
         // (this is to maximize stagger)
+        /**
+         * @type {{ rowOne: any; rowTwo: any; minDiff: number; }[]}
+         */
         let combinations = [];
         layout.forEach((rowTwoOptions, rowOne) => {
-            rowTwoOptions.forEach(rowTwo => {
+            rowTwoOptions.forEach((/** @type {{ startingLength: any; leftover: any; }} */ rowTwo) => {
                 let row1Start = rowOne.startingLength;
                 let row2Start = rowTwo.startingLength;
                 let row3Start = rowOne.leftover;
@@ -121,9 +124,12 @@ document.addEventListener('DOMContentLoaded', () => {
             const diagramsContainer = document.createElement('div');
             diagramsContainer.id = 'diagrams-container';
             combinationIndex = 0; // Reset for diagram indexing
+            /**
+             * @type {{ rowOne: any; rowTwo: any; index: number; }[]}
+             */
             const combinations = [];
             layout.forEach((rowTwoOptions, rowOneOption) => {
-                rowTwoOptions.forEach((rowTwoOption) => {
+                rowTwoOptions.forEach((/** @type {any} */ rowTwoOption) => {
                     combinations.push({ rowOne: rowOneOption, rowTwo: rowTwoOption, index: combinationIndex });
                     combinationIndex++;
                 });
@@ -195,9 +201,11 @@ document.addEventListener('DOMContentLoaded', () => {
             const radios = table.querySelectorAll('input[type="radio"][name="layout-selection"]');
             radios.forEach(radio => {
                 radio.addEventListener('change', (e) => {
+                    if (!(e.target instanceof HTMLInputElement)) return;
                     const selectedIndex = e.target.value;
                     const diagrams = diagramsContainer.querySelectorAll('.layout-diagram');
                     diagrams.forEach(diagram => {
+                        if (!(diagram instanceof HTMLElement)) return;
                         diagram.style.display = diagram.dataset.combinationIndex === selectedIndex ? 'block' : 'none';
                     });
                 });
