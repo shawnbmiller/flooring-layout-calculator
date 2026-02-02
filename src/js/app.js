@@ -29,13 +29,47 @@ document.addEventListener('DOMContentLoaded', () => {
             totalResults += rowTwoOptions.length;
         });
 
-        console.log('Calculated layout:', layout);
+        // limit results to the 3 best options. Compare the starting lengths of adjacent rows and choose the options with the largest minimum difference
+        // (this is to maximize stagger)
+        let combinations = [];
+        layout.forEach((rowTwoOptions, rowOne) => {
+            rowTwoOptions.forEach(rowTwo => {
+                let row1Start = rowOne.startingLength;
+                let row2Start = rowTwo.startingLength;
+                let row3Start = rowOne.leftover;
+                let row4Start = rowTwo.leftover;
+                let diff1 = calculateStaggerDiff(row1Start, row2Start, plankLength);
+                let diff2 = calculateStaggerDiff(row2Start, row3Start, plankLength);
+                let diff3 = calculateStaggerDiff(row3Start, row4Start, plankLength);
+                let minDiff = Math.min(diff1, diff2, diff3);
+                combinations.push({ rowOne, rowTwo, minDiff });
+            });
+        });
+        combinations.sort((a, b) => b.minDiff - a.minDiff);
+        // select top 3 combinations with at least 3 inches difference in starting lengths
+        let topCombinations = [];
+        let selectedStartingLengths = [];
+        for (let combo of combinations) {
+            let startingLength = combo.rowOne.startingLength;
+            let isFarEnough = selectedStartingLengths.every(selected => Math.abs(startingLength - selected) >= 3);
+            if (isFarEnough) {
+                topCombinations.push(combo);
+                selectedStartingLengths.push(startingLength);
+                if (topCombinations.length >= 3) break;
+            }
+        }
+        let newLayout = new Map();
+        topCombinations.forEach(({ rowOne, rowTwo }) => {
+            if (!newLayout.has(rowOne)) {
+                newLayout.set(rowOne, []);
+            }
+            newLayout.get(rowOne).push(rowTwo);
+        });
+        layout = newLayout;
+
         // Display layout options
         const layoutDiv = document.getElementById('layout-visualization');
         if (layoutDiv) {
-            layoutDiv.innerHTML = '';
-            layoutDiv.innerHTML += `<h3>Found ${totalResults} layout options</h3>`;
-            layoutDiv.innerHTML += `<p>Calculation Time: ${calculationTime.toFixed(2)} ms</p>`;
             const table = document.createElement('table');
             table.classList.add('layout-table');
             
@@ -56,10 +90,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 rowTwoOptions.forEach((/** @type {{ startingLength: number; leftover: number; }} */ rowTwoOption) => {
                     const tr = document.createElement('tr');
                     [
-                        rowOneOption.startingLength.toFixed(2),
-                        rowTwoOption.startingLength.toFixed(2),
-                        rowOneOption.leftover.toFixed(2),
-                        rowTwoOption.leftover.toFixed(2)
+                        rowOneOption.startingLength.toFixed(3),
+                        rowTwoOption.startingLength.toFixed(3),
+                        rowOneOption.leftover.toFixed(3),
+                        rowTwoOption.leftover.toFixed(3)
                     ].forEach(value => {
                         const td = document.createElement('td');
                         td.textContent = value;
@@ -117,7 +151,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     plankDiv.style.width = `${plankLengthIn * scale}px`;
                     plankDiv.style.height = `${plankWidth * scale}px`;
                     plankDiv.style.backgroundColor = `hsl(${(rowIndex * 60) % 360}, 70%, 80%)`;
-                    plankDiv.textContent = `${plankLengthIn.toFixed(1)}"`;
+                    plankDiv.textContent = `${plankLengthIn.toFixed(3)}"`;
                     diagramDiv.appendChild(plankDiv);
                     currentX += plankLengthIn * scale;
                 }
@@ -164,7 +198,7 @@ function findLayout(roomLength, roomWidth, plankLength, plankWidth, perimeterSpa
     const minStartingLength = 8;
 
     let rowOneStartingLengths = [];
-    for (let len = minStartingLength; len <= plankLength; len += 0.25) {
+    for (let len = minStartingLength; len <= plankLength; len += 0.125) {
         rowOneStartingLengths.push(len);
     }
 
@@ -180,8 +214,8 @@ function findLayout(roomLength, roomWidth, plankLength, plankWidth, perimeterSpa
     console.log('Initial row one options:', JSON.stringify(rowOnePlanksOptions, null, 2));
     // elmininate any options where the leftover piece is less than minStartingLength
     rowOnePlanksOptions = rowOnePlanksOptions.filter(option => option.leftover >= minStartingLength)
-    // eliminate any options where the last plank is less than 3 inches
-    rowOnePlanksOptions = rowOnePlanksOptions.filter(option => option.planks[option.planks.length - 1] >= 3);
+    // eliminate any options where the last plank is less than 2 inches
+    rowOnePlanksOptions = rowOnePlanksOptions.filter(option => option.planks[option.planks.length - 1] >= 2);
     // calculate row three options based on lefterovers from row one, and eliminate row one if row three leftover is less than minStartingLength
     let rowOneEliminations = [];
     for (let option of rowOnePlanksOptions) {
@@ -191,8 +225,8 @@ function findLayout(roomLength, roomWidth, plankLength, plankWidth, perimeterSpa
         if (rowThreeLeftover < minStartingLength) {
             rowOneEliminations.push(option);
         }
-        // eliminate if last plank in row three is less than 3 inches
-        if (planks[planks.length - 1] < 3) {
+        // eliminate if last plank in row three is less than 2 inches
+        if (planks[planks.length - 1] < 2) {
             rowOneEliminations.push(option);
         }
     }
@@ -226,10 +260,11 @@ function findLayout(roomLength, roomWidth, plankLength, plankWidth, perimeterSpa
         }
 
         let rowTwoStartingLengths = [];
-        for (let len = rowTwoMinStartingLength; len <= rowTwoMaxStartingLength; len += 0.25) {
+        for (let len = rowTwoMinStartingLength; len <= rowTwoMaxStartingLength; len += 0.125) {
             // Ensure row two starting length differs from row one starting length by at least minStagger
             // Also ensure row two starting length differs from row one leftover (row 3's starting length) by at least minStagger
-            if (Math.abs(len - rowOneStartingLength) >= minStagger && Math.abs(len - rowOneLeftover) >= minStagger) {
+            if (calculateStaggerDiff(len, rowOneStartingLength, plankLength) >= minStagger
+                && calculateStaggerDiff(len, rowOneLeftover, plankLength) >= minStagger) {
                 rowTwoStartingLengths.push(len);
             }
         }
@@ -244,9 +279,10 @@ function findLayout(roomLength, roomWidth, plankLength, plankWidth, perimeterSpa
             });
         }
         // elmininate any options where the leftover piece is less than minStartingLength or less than min stagger from row one leftover
-        rowTwoPlanksOptions = rowTwoPlanksOptions.filter(option => option.leftover >= minStartingLength && Math.abs(option.leftover - rowOneLeftover) >= minStagger);
-        // eliminate any options where the last plank is less than 3 inches
-        rowTwoPlanksOptions = rowTwoPlanksOptions.filter(option => option.planks[option.planks.length - 1] >= 3);
+        rowTwoPlanksOptions = rowTwoPlanksOptions.filter(option => option.leftover >= minStartingLength
+            && calculateStaggerDiff(option.leftover, rowOneLeftover, plankLength) >= minStagger);
+        // eliminate any options where the last plank is less than 2 inches
+        rowTwoPlanksOptions = rowTwoPlanksOptions.filter(option => option.planks[option.planks.length - 1] >= 2);
 
         // calculate row four options based on lefterovers from row two, and eliminate row two if row four leftover is less than minStartingLength
         let rowTwoEliminations = [];
@@ -257,8 +293,8 @@ function findLayout(roomLength, roomWidth, plankLength, plankWidth, perimeterSpa
             if (rowFourLeftover < minStartingLength) {
                 rowTwoEliminations.push(option2);
             }
-            // eliminate if last plank in row four is less than 3 inches
-            if (planks[planks.length - 1] < 3) {
+            // eliminate if last plank in row four is less than 2 inches
+            if (planks[planks.length - 1] < 2) {
                 rowTwoEliminations.push(option2);
             }
         }
@@ -291,4 +327,19 @@ function calculateRowPlanks(rowLength, plankLength, startingLength) {
     }
     console.log(`Calculated planks for row length ${rowLength} with starting length ${startingLength}:`, planks);
     return planks;
+}
+
+/**
+ * @param {number} lengthA
+ * @param {number} lengthB
+ * @param {number} plankLength
+ */
+function calculateStaggerDiff(lengthA, lengthB, plankLength) {
+    const diff = Math.abs(lengthA - lengthB);
+    if (diff > plankLength / 2) {
+        const shorter = Math.min(lengthA, lengthB);
+        const longer = Math.max(lengthA, lengthB);
+        return Math.abs((shorter + plankLength) - longer);
+    }
+    return diff;
 }
