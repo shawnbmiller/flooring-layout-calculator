@@ -76,7 +76,7 @@ document.addEventListener('DOMContentLoaded', () => {
             // Create header row
             const thead = document.createElement('thead');
             const headerRow = document.createElement('tr');
-            ['Row 1 Start (in)', 'Row 2 Start (in)', 'Row 3 Start (Row 1 Leftover) (in)', 'Row 4 Start (Row 2 Leftover) (in)'].forEach(text => {
+            ['Select', 'Row 1 Start (in)', 'Row 2 Start (in)', 'Row 3 Start (Row 1 Leftover) (in)', 'Row 4 Start (Row 2 Leftover) (in)'].forEach(text => {
                 const th = document.createElement('th');
                 th.textContent = text;
                 headerRow.appendChild(th);
@@ -86,9 +86,20 @@ document.addEventListener('DOMContentLoaded', () => {
             
             // Create body rows
             const tbody = document.createElement('tbody');
+            let combinationIndex = 0;
             layout.forEach((rowTwoOptions, rowOneOption) => {
                 rowTwoOptions.forEach((/** @type {{ startingLength: number; leftover: number; }} */ rowTwoOption) => {
                     const tr = document.createElement('tr');
+                    // Add radio button cell
+                    const selectTd = document.createElement('td');
+                    const radio = document.createElement('input');
+                    radio.type = 'radio';
+                    radio.name = 'layout-selection';
+                    radio.value = combinationIndex.toString();
+                    if (combinationIndex === 0) radio.checked = true; // Default to first option
+                    selectTd.appendChild(radio);
+                    tr.appendChild(selectTd);
+                    
                     [
                         rowOneOption.startingLength.toFixed(3),
                         rowTwoOption.startingLength.toFixed(3),
@@ -100,69 +111,97 @@ document.addEventListener('DOMContentLoaded', () => {
                         tr.appendChild(td);
                     });
                     tbody.appendChild(tr);
+                    combinationIndex++;
                 });
             });
             table.appendChild(tbody);
             layoutDiv.appendChild(table);
 
-            // create a diagram of the first layout option's first 5 rows
-            const layoutFigure = document.createElement('figure');
-            const diagramDiv = document.createElement('div');
-            diagramDiv.classList.add('diagram-container');
-            const scale = window.innerWidth / roomLength; // Scale factor to make diagram fill the page width
-            diagramDiv.style.width = `${roomLength * scale}px`;
-            diagramDiv.style.height = `${(plankWidth * 5 + perimeterSpacing * 2) * scale}px`;
-            // draw perimeter spacing
-            const perimeterDiv = document.createElement('div');
-            perimeterDiv.classList.add('perimeter-spacing', 'perimeter-spacing-top');
-            perimeterDiv.style.height = `${perimeterSpacing * scale}px`;
-            diagramDiv.appendChild(perimeterDiv);
-            const perimeterBottomDiv = document.createElement('div');
-            perimeterBottomDiv.classList.add('perimeter-spacing', 'perimeter-spacing-bottom');
-            perimeterBottomDiv.style.height = `${perimeterSpacing * scale}px`;
-            diagramDiv.appendChild(perimeterBottomDiv);
-            
-            // get first row one and row two options
-            const firstRowOneOption = layout.keys().next().value;
-            const firstRowTwoOption = layout.get(firstRowOneOption)[0];
-            const rows = [firstRowOneOption, firstRowTwoOption];
-            // calculate rows 3, 4, and 5 based on leftovers
-            for (let i = 2; i < 5; i++) {
-                const previousRow = rows[i - 2];
-                const leftover = previousRow.leftover;
-                const planks = calculateRowPlanks(roomLength - (2 * perimeterSpacing), plankLength, leftover);
-                rows.push({
-                    startingLength: leftover,
-                    planks: planks,
-                    leftover: plankLength - planks[planks.length - 1]
+            // Create diagrams for all combinations
+            const diagramsContainer = document.createElement('div');
+            diagramsContainer.id = 'diagrams-container';
+            combinationIndex = 0; // Reset for diagram indexing
+            const combinations = [];
+            layout.forEach((rowTwoOptions, rowOneOption) => {
+                rowTwoOptions.forEach((rowTwoOption) => {
+                    combinations.push({ rowOne: rowOneOption, rowTwo: rowTwoOption, index: combinationIndex });
+                    combinationIndex++;
                 });
-            }
-            
-            // draw rows
-            for (let rowIndex = 0; rowIndex < rows.length; rowIndex++) {
-                const row = rows[rowIndex];
-                let currentX = perimeterSpacing * scale;
-                const yPosition = (perimeterSpacing + (rowIndex * plankWidth)) * scale;
-                for (let plankLengthIn of row.planks) {
-                    const plankDiv = document.createElement('div');
-                    plankDiv.classList.add('plank');
-                    plankDiv.style.left = `${currentX}px`;
-                    plankDiv.style.top = `${yPosition}px`;
-                    plankDiv.style.width = `${plankLengthIn * scale}px`;
-                    plankDiv.style.height = `${plankWidth * scale}px`;
-                    plankDiv.style.backgroundColor = `hsl(${(rowIndex * 60) % 360}, 70%, 80%)`;
-                    plankDiv.textContent = `${plankLengthIn.toFixed(3)}"`;
-                    diagramDiv.appendChild(plankDiv);
-                    currentX += plankLengthIn * scale;
+            });
+
+            combinations.forEach(({ rowOne, rowTwo, index }) => {
+                const layoutFigure = document.createElement('figure');
+                layoutFigure.classList.add('layout-diagram');
+                layoutFigure.dataset.combinationIndex = index.toString();
+                if (index !== 0) layoutFigure.style.display = 'none'; // Hide all except first
+                
+                const diagramDiv = document.createElement('div');
+                diagramDiv.classList.add('diagram-container');
+                const scale = window.innerWidth / roomLength; // Scale factor to make diagram fill the page width
+                diagramDiv.style.width = `${roomLength * scale}px`;
+                diagramDiv.style.height = `${(plankWidth * 5 + perimeterSpacing * 2) * scale}px`;
+                // draw perimeter spacing
+                const perimeterDiv = document.createElement('div');
+                perimeterDiv.classList.add('perimeter-spacing', 'perimeter-spacing-top');
+                perimeterDiv.style.height = `${perimeterSpacing * scale}px`;
+                diagramDiv.appendChild(perimeterDiv);
+                const perimeterBottomDiv = document.createElement('div');
+                perimeterBottomDiv.classList.add('perimeter-spacing', 'perimeter-spacing-bottom');
+                perimeterBottomDiv.style.height = `${perimeterSpacing * scale}px`;
+                diagramDiv.appendChild(perimeterBottomDiv);
+                
+                const rows = [rowOne, rowTwo];
+                // calculate rows 3, 4, and 5 based on leftovers
+                for (let i = 2; i < 5; i++) {
+                    const previousRow = rows[i - 2];
+                    const leftover = previousRow.leftover;
+                    const planks = calculateRowPlanks(roomLength - (2 * perimeterSpacing), plankLength, leftover);
+                    rows.push({
+                        startingLength: leftover,
+                        planks: planks,
+                        leftover: plankLength - planks[planks.length - 1]
+                    });
                 }
-            }
-            
-            layoutFigure.appendChild(diagramDiv);
-            const sampleDiagramCaption = document.createElement("figcaption");
-            sampleDiagramCaption.textContent = "Sample Layout Diagram (first option, first 5 rows)";
-            layoutFigure.appendChild(sampleDiagramCaption);
-            // insert first in layout div
-            layoutDiv.firstChild ? layoutDiv.insertBefore(layoutFigure, layoutDiv.firstChild) : layoutDiv.appendChild(layoutFigure);
+                
+                // draw rows
+                for (let rowIndex = 0; rowIndex < rows.length; rowIndex++) {
+                    const row = rows[rowIndex];
+                    let currentX = perimeterSpacing * scale;
+                    const yPosition = (perimeterSpacing + (rowIndex * plankWidth)) * scale;
+                    for (let plankLengthIn of row.planks) {
+                        const plankDiv = document.createElement('div');
+                        plankDiv.classList.add('plank');
+                        plankDiv.style.left = `${currentX}px`;
+                        plankDiv.style.top = `${yPosition}px`;
+                        plankDiv.style.width = `${plankLengthIn * scale}px`;
+                        plankDiv.style.height = `${plankWidth * scale}px`;
+                        plankDiv.style.backgroundColor = `hsl(${(rowIndex * 60) % 360}, 70%, 80%)`;
+                        plankDiv.textContent = `${plankLengthIn.toFixed(3)}"`;
+                        diagramDiv.appendChild(plankDiv);
+                        currentX += plankLengthIn * scale;
+                    }
+                }
+                
+                layoutFigure.appendChild(diagramDiv);
+                const sampleDiagramCaption = document.createElement("figcaption");
+                sampleDiagramCaption.textContent = `Layout Diagram (Option ${index + 1}, first 5 rows)`;
+                layoutFigure.appendChild(sampleDiagramCaption);
+                diagramsContainer.appendChild(layoutFigure);
+            });
+
+            layoutDiv.appendChild(diagramsContainer);
+
+            // Add event listeners to radio buttons
+            const radios = table.querySelectorAll('input[type="radio"][name="layout-selection"]');
+            radios.forEach(radio => {
+                radio.addEventListener('change', (e) => {
+                    const selectedIndex = e.target.value;
+                    const diagrams = diagramsContainer.querySelectorAll('.layout-diagram');
+                    diagrams.forEach(diagram => {
+                        diagram.style.display = diagram.dataset.combinationIndex === selectedIndex ? 'block' : 'none';
+                    });
+                });
+            });
 
         }
         else {
