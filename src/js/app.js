@@ -301,6 +301,7 @@ function createLayoutDiagram(rowOne, rowTwo, index, roomLength, plankWidth, peri
         const row = rows[rowIndex];
         let currentX = perimeterSpacing * scale;
         const yPosition = (perimeterSpacing + (rowIndex * plankWidth)) * scale;
+        let plankIndexInRow = 0;
         for (const plankLengthIn of row.planks) {
             const plankDiv = document.createElement('div');
             plankDiv.classList.add('plank');
@@ -308,10 +309,22 @@ function createLayoutDiagram(rowOne, rowTwo, index, roomLength, plankWidth, peri
             plankDiv.style.top = `${yPosition}px`;
             plankDiv.style.width = `${plankLengthIn * scale}px`;
             plankDiv.style.height = `${plankWidth * scale}px`;
-            plankDiv.style.backgroundColor = `hsl(${(rowIndex * 60) % 360}, 70%, 80%)`;
+            
+            // For rows after row 2 (index 2 = row 3), make the starting piece the same color as the row it came from
+            // Row 3 (index 2) starting piece comes from Row 1 (index 0)
+            // Row 4 (index 3) starting piece comes from Row 2 (index 1)
+            // And so on...
+            let colorIndex = rowIndex;
+            if (rowIndex >= 2 && plankIndexInRow === 0) {
+                // Starting piece uses color from the row it came from (2 rows before)
+                colorIndex = rowIndex - 2;
+            }
+            
+            plankDiv.style.backgroundColor = `hsl(${(colorIndex * 60) % 360}, 70%, 80%)`;
             plankDiv.textContent = `${plankLengthIn.toFixed(3)}"`;
             diagramDiv.appendChild(plankDiv);
             currentX += plankLengthIn * scale;
+            plankIndexInRow++;
         }
     }
 
